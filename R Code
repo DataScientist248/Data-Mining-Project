@@ -1,0 +1,636 @@
+#TRAINING DATA SET
+setwd("/Users/chiragsubramanian/Desktop/Stanford Summer Session/SmileyGo/SmileyGo Algorithm")
+getwd()
+TrainingData <- read.csv("training.csv",sep = ",", header = TRUE , stringsAsFactors = FALSE)
+TestData <- read.csv("test.csv",sep = ",", header = TRUE , stringsAsFactors = FALSE)
+names(TrainingData)
+dim(TrainingData)
+summary(TrainingData)
+cor(TrainingData)
+plot(TrainingData$sig1)
+plot(TrainingData$sig2)
+plot(TrainingData$sig8)
+
+#Scatterplot
+plot(~query_length+is_homepage+sig1+sig2+sig3+sig4+sig5+sig6+sig7+sig8+relevance, TrainingData, main = "Scatterplot")
+hist(TrainingData$query_length)
+hist(TrainingData$is_homepage)
+hist(TrainingData$sig1)
+hist(TrainingData$sig2)
+hist(TrainingData$sig3)
+hist(TrainingData$sig4)
+hist(TrainingData$sig5)
+hist(TrainingData$sig6)
+hist(TrainingData$sig7)
+hist(TrainingData$sig8)
+hist(TrainingData$relevance)
+
+
+# Scaling and Transforming the Data- Part 1 (sqrt and log transformation) 
+query_length <- scale(log(TrainingData$query_length+1))
+is_homepage  <- scale(log(TrainingData$is_homepage+1))
+sig1 <- scale(sqrt(TrainingData$sig1+1))
+sig2 <- scale(TrainingData$sig2)
+sig3 <- scale(log(TrainingData$sig3+1))
+sig4 <- scale(log(TrainingData$sig4+1))
+sig5 <- scale(log(TrainingData$sig5+1))
+sig6 <- scale(log(TrainingData$sig6+1))
+sig7 <- scale(TrainingData$sig7)          
+sig8 <-  scale(log(TrainingData$sig8+1))
+relevance <- TrainingData$relevance
+
+TransformedData <- data.frame(query_length,is_homepage,sig1,sig2,sig3,sig4,sig5,sig6,sig7,sig8,relevance)
+train <- sample(1:nrow(TransformedData),nrow(TransformedData)/(5/4))
+test <- (-train)
+test
+train.TransformedData <-  TransformedData[train,]
+test.TransformedData <- TransformedData[test,]
+
+#Logistic Regression Model 1 (scaling predictor variables and including them)
+glm.fit = glm(relevance ~ query_length + is_homepage + sig1 + sig2
+              + sig3 + sig4 + sig5 + sig6 + sig7 + sig8, 
+              data = train.TransformedData, family = "binomial" )
+summary(glm.fit)
+glm.probs = predict(glm.fit, test.TransformedData, type = "response" )
+glm.pred = rep(1,length(glm.probs))
+glm.pred[glm.probs < 0.5] = 0
+glm.pred[1:21]
+table(glm.pred, test.TransformedData$relevance)
+mean(test.TransformedData$relevance == glm.pred)
+mean(test.TransformedData$relevance != glm.pred)
+contrasts(relevance)
+
+# Scaling and Transforming the Data- Part 2 (scaling and including interaction variables)
+query_length <- scale(log(TrainingData$query_length+1))
+is_homepage  <- scale(log(TrainingData$is_homepage+1))
+sig1 <- scale(sqrt(TrainingData$sig1+1))
+sig2 <- scale(TrainingData$sig2)
+sig3 <- scale(log(TrainingData$sig3+1))
+sig4 <- scale(log(TrainingData$sig4+1))
+sig5 <- scale(log(TrainingData$sig5+1))
+sig6 <- scale(log(TrainingData$sig6+1))
+sig7 <- scale(TrainingData$sig7)          
+sig8 <-  scale(log(TrainingData$sig8+1))
+relevance <- TrainingData$relevance
+sig9  <- scale(sig3*sig5)
+sig10 <- scale(sig5*sig6)
+InterTransformedData = data.frame(is_homepage,query_length,sig1,sig2,sig3,sig4,sig5,sig6,sig7,sig8,relevance ,sig9 ,sig10)
+summary(InterTransformedData)
+round(cor(InterTransformedData) ,3)
+train <- sample(1:nrow(InterTransformedData),nrow(InterTransformedData)/(5/4))
+test <- (-train)
+train.InterTransformedData <-  InterTransformedData[train,]
+test.InterTransformedData <- InterTransformedData[test,]
+
+
+#Logistic Regression Model 2 (InterTransformedData)
+glm.fitA = glm(relevance ~ query_length + is_homepage + sig1 + sig2
+              + sig3 + sig4 + sig5 + sig6 + sig7 + sig8 + sig9 +sig10, 
+              data = train.InterTransformedData, family = "binomial" )
+
+summary(glm.fitA)
+glm.probsA = predict(glm.fitA, test.InterTransformedData, type = "response" )
+glm.predA = rep(0,length(glm.probsA))
+glm.predA[glm.probs < 0.5] = 1
+glm.predA[1:21]
+table(glm.predA, test.InterTransformedData$relevance)
+mean(test.InterTransformedData$relevance == glm.predA)
+mean(test.InterTransformedData$relevance != glm.predA)
+
+
+
+# Scaling and Transforming the Data- Part 3 (quadratic transformation)
+sig12=scale(sig1^2)
+sig22=scale(sig2^2)
+sig32=scale(sig3^2)
+sig42=scale(sig4^2)
+sig52=scale(sig5^2)
+sig62=scale(sig6^2)
+sig72=scale(sig7^2)
+sig82=scale(sig8^2)
+i_h2=scale(is_homepage^2)
+q_l2=scale(query_length^2)
+
+Squared_Scaled_Data <- data.frame(sig12,sig22,sig32,sig42,sig52,sig62,sig72,sig82,i_h2,q_l2,relevance)
+train <- sample(1:nrow(Squared_Scaled_Data),nrow(Squared_Scaled_Data)/(5/4))
+test <- (-train)
+test
+train.Squared_Scaled_Data  <-  Squared_Scaled_Data[train,]
+test.Squared_Scaled_Data <- Squared_Scaled_Data[test,]
+
+glm.fitB = glm(relevance ~ q_l2 + i_h2 + sig12 + sig22
+                  + sig32 + sig42 + sig52 + sig62 + sig72 + sig82,
+                 data = train.Squared_Scaled_Data, family = "binomial" )
+summary(glm.fitB)
+glm.probsB = predict(glm.fitB, test.Squared_Scaled_Data, type = "response" )
+glm.predB = rep(1,length(glm.probsB))
+glm.predB[glm.probs < 0.5] = 0
+glm.predB[1:21]
+table(glm.predB, test.Squared_Scaled_Data$relevance)
+mean(test.Squared_Scaled_Data$relevance == glm.predB)
+mean(test.Squared_Scaled_Data$relevance != glm.predB)
+
+
+
+#Logistic Regression Model 2 (QuadInterTransformedData)
+QuadInterTransformedData <- data.frame(sig12,sig22,sig32,sig42,sig52,sig62,sig72,sig82,i_h2,q_l2,relevance,
+                                       is_homepage,query_length,sig1,sig2,sig3,sig4,sig5,sig6,sig7,sig8,sig9,sig10)
+dim(QuadInterTransformedData)
+train <- sample(1:nrow(QuadInterTransformedData),nrow(QuadInterTransformedData)/(5/4))
+test <- (-train)
+train.QuadInterTransformedData <-  QuadInterTransformedData[train,]
+test.QuadInterTransformedData <- QuadInterTransformedData[test,]
+dim(train.QuadInterTransformedData)
+dim(test.QuadInterTransformedData)
+summary(QuadInterTransformedData)
+summary(train.QuadInterTransformedData)
+summary(test.QuadInterTransformedData)
+
+#Logistic Regression Model 2 (QuadInterTransformedData)
+
+glm.fitC = glm(relevance ~ query_length + is_homepage + sig1 + sig2
+               + sig3 + sig4 + sig5 + sig6 + sig7 + sig8 + sig9 + sig10 + q_l2 + sig12 + sig22
+               + sig32 + sig42 + sig52 + sig62 + sig72 + sig82, 
+               data = train.QuadInterTransformedData, family = "binomial" )
+
+summary(glm.fitC)
+glm.probsC = predict(glm.fitC, test.QuadInterTransformedData, type = "response" )
+glm.predC = rep(1,length(glm.probsC))
+glm.predC[glm.probsC < 0.5] = 0
+glm.predC[1:21]
+table(glm.predC, test.QuadInterTransformedData$relevance)
+mean(test.QuadInterTransformedData$relevance == glm.predC)
+mean(test.QuadInterTransformedData$relevance != glm.predC)
+
+
+#Logistic Regression Model 2 (QuadInterTransformedData) - without insignificant predictors
+glm.fitD = glm(relevance ~ query_length + is_homepage + sig1 + sig2
+                + sig4 + sig6 + sig7 + sig8 + sig9 + q_l2 + sig12 + sig22
+               + sig62, 
+               data = train.QuadInterTransformedData, family = "binomial" )
+
+summary(glm.fitD)
+glm.probsD = predict(glm.fitD, test.QuadInterTransformedData, type = "response" )
+glm.predD = rep(1,length(glm.probsD))
+glm.predD[glm.probsD < 0.5] = 0
+glm.predD[1:21]
+table(glm.predD, test.QuadInterTransformedData$relevance)
+mean(test.QuadInterTransformedData$relevance == glm.predD)
+mean(test.QuadInterTransformedData$relevance != glm.predD)
+
+# K nearest neighbors #use knn.cv
+
+
+library(class)
+FormattedData = data.frame(query_length, is_homepage, sig1, sig2, sig3, sig4, sig5, sig6, sig7, sig8,relevance)
+
+train = sample(1:nrow(FormattedData), nrow(FormattedData)/(5/4)) 
+test = (-train)
+train.FormattedData = FormattedData[train,]
+test.FormattedData = FormattedData[test,]
+dim(train.FormattedData)
+dim(test.FormattedData)
+train.relevance = FormattedData$relevance[train]
+test.relevance  = FormattedData$relevance[test]
+library(class)
+KNN_test_error<- rep(200,210)
+for(i in 190:210)
+{
+  knn.pred = knn(train.FormattedData,test.FormattedData,train.relevance,k=i)
+  KNN_test_error[i] = mean(test.relevance!=knn.pred)
+}
+KNN_test_error
+KNN_test_error[ which.min(KNN_test_error)]
+
+
+rm(list=ls())
+
+
+
+
+
+
+
+# The Lasso
+
+
+FormattedData <- data.frame(query_length, is_homepage, sig1, sig2, sig3, sig4, sig5, sig6, sig7, sig8,relevance)
+relevance <- as.factor(relevance)
+train <- sample(1:nrow(TransformedData), nrow(TransformedData)/(5/4))
+test <- (-train)
+train.relevance <- relevance[train]
+test.relevance  <- relevance[test]
+train.FormattedData <- FormattedData[train,]
+test.FormattedData <- FormattedData[test,]
+train.y = FormattedData$relevance[train]
+test.y = FormattedData$relevance[test]
+
+library(glmnet)
+grid = 10^seq(10,-2,length=100)
+train.mat = model.matrix(relevance ~ query_length + is_homepage + sig1 + sig2
+                         + sig3 + sig4 + sig5 + sig6 + sig7 + sig8,data = FormattedData[train,])[,-1]
+test.mat = model.matrix(relevance ~ query_length + is_homepage + sig1 + sig2
+                        + sig3 + sig4 + sig5 + sig6 + sig7 + sig8,data = FormattedData[test,])[,-1]
+
+lasso.mod = glmnet(train.mat, train.y, alpha=1, lambda=grid)
+
+
+cv.out = cv.glmnet(train.mat, train.y,alpha = 1)
+plot(cv.out)
+bestlam = cv.out$lambda.min 
+bestlam
+lasso.mod = glmnet(train.mat,train.y,alpha = 1, lambda = grid,thresh=1e-12)
+lasso.probs = predict(lasso.mod,s= bestlam, newx=test.mat)
+lasso.pred = rep(0,length(lasso.probs))
+lasso.pred[lasso.probs>0.5] = 1
+mean(test.y!=lasso.pred)
+mean(test.y==lasso.pred)
+
+# to get the lasso coefficients
+data.mat = model.matrix(relevance~.,data = full.data)[,-1]
+y = full.data$relevance
+out=glmnet(data.mat,y,alpha=1,lambda=grid) 
+lasso.coef=predict (out ,type="coefficients",s=bestlam)[1:11,]
+lasso.coef
+lasso.coef[lasso.coef!=0]
+
+
+
+#Decision Trees
+
+set.seed(5)
+TreeTrain <- read.csv("training.csv", header = TRUE, stringsAsFactors = FALSE)
+TreeTest  <- read.csv("test.csv", header = TRUE, stringsAsFactors = FALSE)
+
+
+#Cut training data into train and test
+
+train <- sample(1:nrow(TreeTrain), nrow(TreeTrain)/(5/4))
+test  <- (-train)
+train.TreeTrain <-  TreeTrain[train,]
+test.TreeTrain <- TreeTrain[test,]
+train.relevance <- TreeTrain$relevance[train]
+test.relevance  <- TreeTrain$relevance[test]
+
+A.Data <- data.frame(query_length, is_homepage, sig1, sig2, sig3, sig4, sig5, sig6, sig7, sig8,relevance, sig9, sig10)
+trainA <- sample(1:nrow(A.Data), nrow(A.Data)/(5/4))
+testA  <- (-train)
+train.A <-  A.Data[train,]
+test.A <- A.Data[test,]
+train.relA <- A.Data$relevance[train]
+test.relA  <- A.Data$relevance[test]
+
+B.Data <- data.frame(query_length, is_homepage, sig1, sig2, sig3, sig4, sig5, sig6, sig7, sig8,relevance, sig9, sig10,
+                     sig12, sig22, sig32, sig42, sig52, sig62, sig72, sig82, i_h2, q_l2)
+trainB <- sample(1:nrow(B.Data), nrow(B.Data)/(5/4))
+testB  <- (-train)
+train.B <-  B.Data[train,]
+test.B <- B.Data[test,]
+train.relB <- B.Data$relevance[train]
+test.relB  <- B.Data$relevance[test]
+
+#TreeTrain
+relevant.subset=ifelse(train.TreeTrain$relevance==1,"YES","NO")
+train.subset=cbind(relevant.subset,train.TreeTrain)
+train.subset$relevance=NULL
+
+relevant.subset.test=ifelse(test.TreeTrain$relevance==1,"YES","NO")
+test.subset=cbind(relevant.subset.test,test.TreeTrain)
+test.subset$relevance=NULL
+
+#A.Train
+relevant.subset.A=ifelse(train.A$relevance==1,"YES","NO")
+train.subset.A=cbind(relevant.subset.A,train.A)
+train.subset.A$relevance=NULL
+
+relevant.subset.test.A=ifelse(test.A$relevance==1,"YES","NO")
+test.subset.A=cbind(relevant.subset.test.A,test.A)
+test.subset.A$relevance=NULL
+
+#B.Train
+relevant.subset.B=ifelse(train.B$relevance==1,"YES","NO")
+train.subset.B=cbind(relevant.subset.B,train.B)
+train.subset.B$relevance=NULL
+
+relevant.subset.test.B=ifelse(test.B$relevance==1,"YES","NO")
+test.subset.B=cbind(relevant.subset.test.B,test.B)
+test.subset.B$relevance=NULL
+
+
+
+library(tree)
+set.seed(5)
+#run tree classification to predict relevant.subset with all other variables in train.subset
+tree.train.subset=tree(relevant.subset~.,data=train.subset)
+summary(tree.train.subset)
+plot(tree.train.subset)
+text(tree.train.subset, pretty=0)
+warnings()
+
+#sig2 and sig6 are the splits
+
+pred.tree=predict(tree.train.subset, test.subset, type="class")
+table(pred.tree,test.subset$relevant.subset)
+
+#prune decision tree with cross validation
+cv.train.subset=cv.tree(tree.train.subset,FUN=prune.misclass)
+names(cv.train.subset)
+cv.train.subset
+which.min(cv.train.subset$dev)
+cv.train.subset$size[which.min(cv.train.subset$dev)]
+par(mfrow=c(1,2))
+plot(cv.train.subset$size,cv.train.subset$dev, type ="b" ,col="green")
+plot(cv.train.subset$k,cv.train.subset$dev, type ="b" ,col="magenta")
+
+#the figure suggests that 3 terminal nodes is optimal
+prune.train.subset=prune.misclass(tree.train.subset,best=3)
+plot(prune.train.subset)
+text(prune.train.subset,pretty=0)
+
+tree.pred=predict(prune.train.subset,test.subset,type="class")
+table(tree.pred,test.subset$relevant.subset)
+(2882+2828)/(2882+2828+6125+4175)
+#Accuracy = (6125+4175)/(2882+2828+6125+4175) = 0.643347907
+#Test Error = 1 - 0.643347907 = 0.356652093
+
+#Bagging
+library(randomForest)
+set.seed(1000)
+bag.train.subset=randomForest(relevant.subset~.,data=train.subset,mtry=12, importance=TRUE)
+bag.train.subset
+importance(bag.train.subset)
+varImpPlot(bag.train.subset)
+bag.pred = predict(bag.train.subset,newdata=test.subset)
+table(bag.pred,relevant.subset.test)
+#test error = (3468+1978)/(3468+1978+7029+3535) = 34.016%
+
+#Random Forest
+#trying random forests with mtry = 3 ~= floor(sqrt(p=12)) 
+rf.train.subset=randomForest(relevant.subset ~.,data=train.subset,mtry=3, importance=TRUE)
+rf.train.subset
+#Training Error Rate = (7740+14077)/(28312+13907+14077+7740) = 0.340698981 = 34.069%
+importance(rf.train.subset)
+varImpPlot(rf.train.subset)
+rf.pred = predict(rf.train.subset,newdata=test.subset)
+table(rf.pred,relevant.subset.test)
+#Test Error Rate = (3463+1852)/(3463+1852+7155+3540) = 0.331980012 = 33.198% 
+#trying random forest with mtry = 4 
+rf2.train.subset=randomForest(relevant.subset ~.,data=train.subset,mtry=4, importance=TRUE)
+rf2.train.subset
+#Training Error Rate = 34%
+importance(rf2.train.subset)
+varImpPlot(rf2.train.subset)
+#sig2 is the most important variable in both mean decrease accuracy and mean decrease Gini
+#sig6 and sig3 are second in each respective plots
+#interestingly sig6 show low mean decrease Gini.
+rf2.pred = predict(rf2.train.subset,newdata=test.subset)
+table(rf2.pred,relevant.subset.test)
+#Test Error Rate = (3467+1902)/(3467+1902+7105+3536) = 0.335352904 = 33.535%
+#trying random forest with mtry = 2
+rf3.train.subset=randomForest(relevant.subset ~.,data=train.subset,mtry=2, importance=TRUE)
+rf3.train.subset
+#Training Error Rate = 33.67%
+importance(rf3.train.subset)
+varImpPlot(rf3.train.subset)
+#sig2 is the most important variable in both mean decrease accuracy and mean decrease Gini
+#sig6 and sig3 are second in each respective plots
+#interestingly sig6 show low mean decrease Gini.
+rf3.pred = predict(rf3.train.subset,newdata=test.subset)
+table(rf3.pred,relevant.subset.test)
+# Test Error Rate = (3571+1733)/(3571+1733+7274+3432) = 33.1292941% ----->lowest test error rate yet
+#trying random forest with mtry = 1
+rf4.train.subset=randomForest(relevant.subset ~.,data=train.subset,mtry=1, importance=TRUE)
+rf4.train.subset
+#Training Error Rate = 34.09%
+importance(rf4.train.subset)
+varImpPlot(rf4.train.subset)
+rf4.pred = predict(rf4.train.subset,newdata=test.subset)
+table(rf4.pred,relevant.subset.test)
+# Test Error Rate = (4254+1145)/(4254+1145+7862+2749) = 33.7226733% 
+#trying random forest with mtry = 5
+rf5.train.subset=randomForest(relevant.subset ~.,data=train.subset,mtry=5, importance=TRUE)
+rf5.train.subset
+#Training Error Rate = 34.18%
+importance(rf5.train.subset)
+varImpPlot(rf5.train.subset)
+rf5.pred = predict(rf5.train.subset,newdata=test.subset)
+table(rf5.pred,relevant.subset.test)
+# Test Error Rate = (3455+1914)/(3455+1914+7093+3558) = 33.514% 
+
+#random forest with mtry=2 gives the least test error rate of 33.129%
+
+
+#Boosting
+library(gbm)
+set.seed(2000)
+boost.train.subset=gbm(relevance ~ query_length+is_homepage+sig1+sig2+sig3+sig4+sig5+sig6+sig7+sig8, data=train.TreeTrain, distribution="gaussian",n.trees=5000,interaction.depth=4)
+summary(boost.train.subset)
+#sig 2 and sig6 have the most relative influence
+par(mfrow=c(1,2))
+plot(boost.train.subset, i="sig2")
+plot(boost.train.subset, i="sig6")
+n.trees=seq(from=100,to=5000,by=100)
+boost.pred=predict(boost.train.subset,newdata=test.TreeTrain, n.trees=n.trees)
+dim(boost.pred)
+berr=with(test.TreeTrain,apply((boost.pred - test.TreeTrain$relevance )^2,2,mean))
+berr1=with(test.subset,apply((boost.pred - test.subset$relevance )^2,2,mean))
+plot(n.trees, berr, pch=19, ylab = "Mean Squared Error", xlab = "Number of Trees"
+                          , main = "Boosting Test Error")
+
+table(boost.pred,test.TreeTrain$relevance)
+mean((boost.pred - test.TreeTrain$relevance)^2)
+abline(h=min(test.err),col="red")
+#mean test error = 0.2167245, number of trees= 100 to 5000
+
+#shrinkage = 0.1 , #number of trees = 5000
+boost2.train.subset=gbm(relevance ~ query_length+is_homepage+sig1+sig2+sig3+sig4+sig5+sig6+sig7+sig8,data=train.TreeTrain, distribution="gaussian",n.trees=5000,interaction.depth=4, shrinkage=0.1)
+summary(boost2.train.subset)
+#sig2 and sig 3 have the most relative influence
+par(mfrow=c(1,2))
+plot(boost2.train.subset, i="sig2")
+plot(boost2.train.subset, i="sig3")
+n.trees=seq(from=100,to=5000,by=100)
+boost.pred2=predict(boost2.train.subset,newdata=test.TreeTrain, n.trees=n.trees)
+dim(boost.pred2)
+berr2=with(test.TreeTrain,apply((boost.pred2 - test.TreeTrain$relevance )^2,2,mean))
+
+plot(n.trees, berr2, pch=19, ylab = "Mean Squared Error", xlab = "Number of Trees"
+     , main = "Boosting Test Error")
+
+table(boost.pred2,test.TreeTrain$relevance)
+mean((boost.pred2 - test.TreeTrain$relevance)^2)
+#mean test error = 0.2122438, number of trees= 100 to 5000
+
+#shrinkage = 0.01 , #number of trees = 5000
+boost3.train.subset=gbm(relevance ~ query_length+is_homepage+sig1+sig2+sig3+sig4+sig5+sig6+sig7+sig8,data=train.TreeTrain, distribution="gaussian",n.trees=5000,interaction.depth=4, shrinkage=0.01)
+summary(boost3.train.subset)
+#sig2 and sig 3 have the most relative influence
+par(mfrow=c(1,2))
+plot(boost3.train.subset, i="sig2")
+plot(boost3.train.subset, i="sig6")
+n.trees=seq(from=100,to=5000,by=100)
+boost.pred3=predict(boost3.train.subset,newdata=test.TreeTrain, n.trees=n.trees)
+
+dim(boost.pred3)
+
+
+berr3=with(test.TreeTrain,apply((boost.pred3 - test.TreeTrain$relevance )^2,2,mean))
+
+plot(n.trees, berr3, pch=19, ylab = "Mean Squared Error", xlab = "Number of Trees"
+     , main = "Boosting Test Error")
+
+table(boost.pred3,test.TreeTrain$relevance)
+mean((boost.pred3 - test.TreeTrain$relevance)^2)
+#mean test error = 0.2097623 = 20.97623%, best test error yet , number of trees= 100 to 5000
+
+#A.Data
+boost3.train.subset.A=gbm(relevance ~ query_length+is_homepage+sig1+sig2+sig3+sig4+sig5+sig6+sig7+sig8+sig9+sig10,data=train.A, distribution="gaussian",n.trees=5000,interaction.depth=4, shrinkage=0.01)
+summary(boost3.train.subset.A)
+#sig4 and sig5 have the most relative influence
+par(mfrow=c(1,2))
+plot(boost3.train.subset.A, i="sig4")
+plot(boost3.train.subset.A, i="sig5")
+n.trees=seq(from=100,to=5000,by=100)
+boost.pred3.A=predict(boost3.train.subset.A,newdata=test.A, n.trees=5000)
+
+dim(boost.pred3.A)
+
+
+berr3.A=with(test.A,apply((boost.pred3.A - test.A )^2,2,mean))
+
+plot(n.trees, berr3.A, pch=19, ylab = "Mean Squared Error", xlab = "Number of Trees"
+     , main = "Boosting Test Error")
+
+table(boost.pred3.A,test.A$relevance)
+mean((boost.pred3.A - test.A$relevance)^2)
+#mean test error = 0.2097623 = 20.97623%, best test error yet , number of trees= 100 to 5000
+
+#B.train
+boost3.train.subset.B=gbm(relevance ~ query_length+is_homepage+sig1+sig2+sig3+sig4+sig5+sig6+sig7+sig8,data=train.B, distribution="gaussian",n.trees=5000,interaction.depth=4, shrinkage=0.01)
+summary(boost3.train.subset.B)
+#sig4 and sig 5 have the most relative influence
+par(mfrow=c(1,2))
+plot(boost3.train.subset.B, i="sig4")
+plot(boost3.train.subset.B, i="sig5")
+n.trees=seq(from=100,to=5000,by=100)
+boost.pred3.B=predict(boost3.train.subset.B,newdata=test.B, n.trees=5000)
+
+dim(boost.pred3.B)
+
+
+berr3.B=with(test.B,apply((boost.pred3.B - test.B )^2,2,mean))
+
+plot(n.trees, berr3.B, pch=19, ylab = "Mean Squared Error", xlab = "Number of Trees"
+     , main = "Boosting Test Error")
+
+table(boost.pred3,test.TreeTrain$relevance)
+mean((boost.pred3 - test.TreeTrain$relevance)^2)
+#mean test error = 0.2114532 = 21.14532%, number of trees= 100 to 5000
+
+#k-fold cross validation 
+library(caret)
+set.seed(1000)
+inTraining <- createDataPartition(TreeTrain$relevance, p = 0.75, list = FALSE)
+training <- TreeTrain[ inTraining,]
+testing <- TreeTrain[ -inTraining,]
+fitControl <- trainControl(method = "repeatedcv", number = 10, repeats = 10)
+set.seed(825)
+gbmFit1 <- train(relevance ~ query_length+is_homepage+sig1+sig2+sig3+sig4+sig5+sig6+sig7+sig8, data = training, method = "gbm", trControl = fitControl, verbose = FALSE)
+gbmFit1 
+
+           
+
+
+# Final Predictions of optimal boosting model on Test Data 
+boost.predF=predict(boost3.train.subset,newdata=TreeTest, n.trees=n.trees)
+dim(boost.predF)
+boost.predF[1:20]
+boost.pred=ifelse(boost.predF > 0.5,"1","0")
+
+dim(boost.pred)
+dim(pred)
+boost.pred[1:30]
+berrF=with(test.TreeTrain,apply((boost.predF - test.TreeTrain$relevance )^2,2,mean))
+mean((boost.predF - test.TreeTrain$relevance)^2)
+predF = as.data.frame(boost.predF)
+head(predF)
+pred = as.data.frame(boost.pred)
+head(pred)
+write.table(predF,file= "Chirag'sPredictions.csv", sep=",",header = TRUE, row.names = TRUE,col.names = TRUE )
+write.csv(pred,file= "Chirag'sPredictions.csv", sep=",", row.names = TRUE,col.names = TRUE )
+
+#shrinkage = 0.001 , #number of trees = 5000
+boost4.train.subset=gbm(relevance ~ query_length+is_homepage+sig1+sig2+sig3+sig4+sig5+sig6+sig7+sig8,data=train.TreeTrain, distribution="gaussian",n.trees=5000,interaction.depth=4, shrinkage=0.001)
+summary(boost4.train.subset)
+#sig2 and sig 6 have the most relative influence
+par(mfrow=c(1,2))
+plot(boost4.train.subset, i="sig2")
+plot(boost4.train.subset, i="sig6")
+n.trees=seq(from=100,to=5000,by=100)
+boost.pred4=predict(boost4.train.subset,newdata=test.TreeTrain, n.trees=n.trees)
+dim(boost.pred4)
+berr4=with(test.TreeTrain,apply((boost.pred4 - test.TreeTrain$relevance )^2,2,mean))
+
+plot(n.trees, berr4, pch=19, ylab = "Mean Squared Error", xlab = "Number of Trees"
+     , main = "Boosting Test Error")
+
+mean((boost.pred4 - test.TreeTrain$relevance)^2)
+#mean test error = 0.2167292 = 21.67292%, number of trees= 100 to 5000
+
+
+
+
+#quadratic discriminant analysis
+FormattedData <- read.csv("training.csv",sep = ",", header = TRUE , stringsAsFactors = FALSE)
+library(MASS)
+data(TransformedData)
+dim(TransformedData)
+train <- sample(1:nrow(TransformedData), nrow(TransformedData)/(5/4))
+test  <- (-train)
+train.X <- TransformedData[train,]
+test.X <- TransformedData[test,]
+train.Y <- TransformedData$relevance[train]
+test.Y <- TransformedData$relevance[test]
+qda.fit <- qda(relevance ~ query_length + is_homepage + sig1 + sig2 + sig3 + sig4 + sig5 + sig6 + sig7 + sig8 ,train.X)
+summary(qda.fit)
+qda.fit
+qda.predict = predict(qda.fit,test.X)$class
+table(qda.predict, test.Y)
+mean(FormattedData$relevance == qda.predict)
+mean(FormattedData$relevance != qda.predict)
+
+#Support Vector Machine (SVM)
+set.seed(5)
+library(e1071)
+SVMData <- data.frame(query_length, is_homepage, sig1, sig2, sig3, sig4, sig5, sig6, sig7, sig8,relevance)
+dim(SVMData)
+train <- sample(1:nrow(SVMData), nrow(SVMData)/(5/4))
+test  = (-train)
+train.A <- SVMData[train,]
+test.A <- SVMData[test,]
+dim(train.A)
+dim(test.A)
+train.B <- SVMData$relevance[train]
+test.B <- SVMData$relevance[test]
+dim(train.B)
+dim(test.B)
+#SVM With Linear Kernel
+svm.linear <- svm(relevance ~ query_length+is_homepage+sig1+sig2+sig3+sig4+sig5+sig6+sig7+sig8,
+              data = train.A, kernel = "linear", cost = 0.01)
+summary(svm.linear)
+train.pred <- predict(svm.linear, train.A)
+1-sum(relevance==predict(svm.linear,train.A))/length(svm.linear)
+
+library(e1071)
+#SVM (Training error rate)
+y <- as.factor(train.A[,11])
+x <- train.A[,1:10]
+fit <- svm(x,y)
+1-sum(y==predict(fit,x))/length(y)
+[1] 0.3288775
+
+#SVM (Test error rate)
+y.test <- as.factor(test.A[,11])
+x.test <-test.A[,1:10]
+1-sum(y.test==predict(fit,x.test))/length(y.test)
+[1] 0.3332584
